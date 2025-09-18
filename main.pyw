@@ -28,7 +28,7 @@ storage_everyweek = {
 # Creates a log.txt file, if missing
 if not (os.path.exists("log.txt")):
     # creates a new log.txt file
-    with open("log.txt", 'r') as file:
+    with open("log.txt", 'w') as file:
         # writing the starting lines
         file.write(f"Lifetime Run Counter: {counter}\n")
         file.write("Last Everyday Deletion: 2020-01-01\n")
