@@ -6,7 +6,7 @@ By default, it deletes five temp folders at different frequencies ranging from e
 <h3>How to use?</h3>
 1. Download the GitHub repository.<br>
 2. Unzip the repository.<br>
-3. Replace line 14 of the main.pyw file, with the paths that you want to use.<br>
-4. Save and close the script.<br>
+3. Create a ".env" file in the same directory and open it. <br>
+4. Write 'PATH=""'. Add the paths inside the double inverted commas. Be sure to separate the paths with a comma(,) in between and ensure that there are no whitespaces. <br>
 5. Open the Task Scheduler.<br>
 6. Create a new task for the script. (Trigger can be whatever the user wants. But it's recommended to run this script at least once every day.)<br>
