@@ -4,6 +4,7 @@ import shutil
 import datetime
 from dotenv import load_dotenv
 
+# loading the dotenv file for accessing it
 load_dotenv(".env")
 
 counter = 0
@@ -11,42 +12,50 @@ total_space = 0.0
 shouldDeleteEveryday = True
 shouldDeleteEveryweek = True
 today = datetime.date.today().strftime("%Y-%m-%d")
-paths = os.getenv("PATHS").split(',')
 
-# storing the path and their storage freed in a dict
-# first 2 are for daily and the rest are for weekly
-storage_everyday = {
-    paths[0]: 0.0,
-    paths[1]: 0.0
-}
-storage_everyweek = {
-    paths[2]: 0.0,
-    paths[3]: 0.0,
-    paths[4]: 0.0
-}
+# getting the data from the .env file
+path_everyday = os.getenv("PATH_EVERYDAY").split(',')
+path_everyweek = os.getenv("PATH_EVERYWEEK").split(',')
 
-# Creates a log.txt file, if missing
-if not (os.path.exists("log.txt")):
-    # creates a new log.txt file
-    with open("log.txt", 'w') as file:
-        # writing the starting lines
-        file.write(f"Lifetime Run Counter: {counter}\n")
-        file.write("Last Everyday Deletion: 2020-01-01\n")
-        file.write("Last Weekly Deletion: 2020-01-01\n")
-        file.write("Last Try: 2020-01-01\n")
-        file.write(f"Total: {total_space} mB\n")
-        file.write(f"Last temp space Freed: {storage_everyday[paths[0]]} mB\n")
-        file.write(f"Last %temp% space Freed: {storage_everyday[paths[1]]} mB\n")
-        file.write(f"Last prefetch space Freed: {storage_everyweek[paths[2]]} mB\n")
-        file.write(f"Last Software Distribution space Freed: {storage_everyweek[paths[3]]} mB\n")
-        file.write(f"Last AMD space Freed: {storage_everyweek[paths[4]]} mB")
+# creating empty dictionary for storing path and their storage
+storage_everyday = {}
+storage_everyweek = {}
 
-log_file = "log.txt"
+# adding the path and storage on the dict
+for path in path_everyday:
+    storage_everyday.update({path: 0.0})
+for path in path_everyweek:
+    storage_everyweek.update({path: 0.0})
 
 
-def Main():
+def main():
     global counter
     global total_space
+
+    # Creates a log.txt file, if missing
+    if not (os.path.exists("log.txt")):
+        # creates a new log.txt file
+        with open("log.txt", 'w') as file:
+            # writing the starting lines
+            file.write(f"Lifetime Run Counter: {counter}\n")
+            file.write("Last Everyday Deletion: 2020-01-01\n")
+            file.write("Last Weekly Deletion: 2020-01-01\n")
+            file.write("Last Try: 2020-01-01\n")
+            file.write(f"Total: {total_space} mB\n")
+            file.write("Daily Deletion:\n")
+
+            # writing the everyday lines
+            for key in storage_everyday.keys():
+                path_name = get_name(key)
+                file.write(f"Last {path_name} space Freed: {storage_everyday[key]} mB\n")
+
+            file.write("Weekly Deletion:\n")
+
+            # writing the everyweek lines
+            for key in storage_everyweek.keys():
+                path_name = get_name(key)
+                file.write(f"Last {path_name} space Freed: {storage_everyweek[key]} mB\n")
+    log_file = "log.txt"
 
     with open(log_file, 'r') as file:
         lines = file.readlines()
@@ -56,13 +65,14 @@ def Main():
         previous_everyday_date = lines[1].replace("Last Everyday Deletion: ", "")
         previous_everyweek_date = lines[2].replace("Last Weekly Deletion: ", "")
         total_space = lines[4].replace("Total: ", "")
-        total_space = total_space.replace(" mB", "")
 
-        # converting the weekly date to int to compare it with today
+        total_space = total_space.replace(" mB", "")
         counter = int(counter)
         counter += 1
-        previous_everyweek_addedvalue = int(previous_everyweek_date.replace("-", "")) + 7
         total_space = float(total_space)
+
+        # converting the weekly date to int to compare it with today
+        previous_everyweek_addedvalue = int(previous_everyweek_date.replace("-", "")) + 7
 
     # Checking whether to Delete or not
     if (previous_everyday_date.strip() != today.strip()):
@@ -79,43 +89,44 @@ def Main():
 
         # for every dir, remove the contents
         for path in storage_everyday:
-            DeleteContents(path, storage_counter, isWeekly=False)
+            delete_contents(path, storage_counter, isWeekly=False)
             storage_counter += 1
 
-        # rounding the size upto 2 decimal points
-        storage_everyday[paths[0]] = round(storage_everyday[paths[0]], 2)
-        storage_everyday[paths[1]] = round(storage_everyday[paths[1]], 2)
+            # rounding the size upto 2 decimal points
+            storage_everyday[path] = round(storage_everyday[path], 2)
 
-        # adding the freed space to total_space
-        total_space += storage_everyday[paths[0]] + storage_everyday[paths[1]]
-        LogEvent(False)
+            # adding the freed space to total_space
+            total_space += storage_everyday[path]
+        
+        log_event(isWeekly=False)
 
     if shouldDeleteEveryweek:
         storage_counter = 0
 
         # for every dir, remove the contents
         for path in storage_everyweek:
-            DeleteContents(path, storage_counter, isWeekly=True)
+            delete_contents(path, storage_counter, isWeekly=True)
             storage_counter += 1
 
-        # rounding the size upto 2 decimal points
-        storage_everyweek[paths[2]] = round(storage_everyweek[paths[2]], 2)
-        storage_everyweek[paths[3]] = round(storage_everyweek[paths[3]], 2)
-        storage_everyweek[paths[4]] = round(storage_everyweek[paths[4]], 2)
+            # rounding the size upto 2 decimal points
+            storage_everyweek[path] = round(storage_everyweek[path], 2)
 
-        # after deletion, adding each folder size freed to the total_space
-        total_space += storage_everyweek[paths[2]] + storage_everyweek[paths[3]] + storage_everyweek[paths[4]]
-        LogEvent(True)
+            # adding the freed space to total_space
+            total_space += storage_everyweek[path]
+        
+        log_event(isWeekly=True)
 
 
-def DeleteContents(path, storage_counter, isWeekly):
+def delete_contents(path, storage_counter, isWeekly):
     if os.path.exists(path):
-        total_size = 0.0
+        path_space_freed = 0.0
         
         # returns the list of filenames in that dir
         files = os.listdir(path)
 
         for file in files:
+            current_size = 0.0
+
             # creates the path for that specific file
             file_path = os.path.join(path, file)
 
@@ -123,37 +134,41 @@ def DeleteContents(path, storage_counter, isWeekly):
                 # os.remove only deletes single files and shutil.rmtree only deletes entire directories
                 if os.path.isfile(file_path) or os.path.islink(file_path):
                     # getting the size of the file that is about to be
-                    total_size += os.path.getsize(file_path)
+                    current_size = os.path.getsize(file_path)
                     # converting to mB[get_size() function returns in bytes]
-                    total_size /= math.pow(1024, 2)
+                    current_size /= math.pow(1024, 2)
 
                     os.remove(file_path)
                 elif os.path.isdir(file_path):
                     # adding the total size for each subfolder
-                    total_size += get_dir_size(file_path)
+                    current_size = get_dir_size(file_path)
 
                     # converting to mB
-                    total_size /= math.pow(1024, 2)
+                    current_size /= math.pow(1024, 2)
+                    
                     shutil.rmtree(file_path)
             except Exception:
                 # In case file can't be deleted, set size to 0.0 for accurate calculation
-                total_size = 0.0
+                current_size = 0.0
 
-        # adding the current file size to the total based on their deletion frequency
+             # adding the current file size to the total
+            path_space_freed += current_size
+        
+        # updating the total space freed
         if isWeekly:
             match storage_counter:
                 case 0:
-                    storage_everyweek[path] = total_size
+                    storage_everyweek[path] = path_space_freed
                 case 1:
-                    storage_everyweek[path] = total_size
+                    storage_everyweek[path] = path_space_freed
                 case 2:
-                    storage_everyweek[path] = total_size
+                    storage_everyweek[path] = path_space_freed
         else:
             match storage_counter:
                 case 0:
-                    storage_everyday[path] = total_size
+                    storage_everyday[path] = path_space_freed
                 case 1:
-                    storage_everyday[path] = total_size
+                    storage_everyday[path] = path_space_freed
 
 
 # calls for the function recursively until every file size is counted
@@ -177,9 +192,23 @@ def get_dir_size(path):
     return dir_size
 
 
-def LogEvent(isWeekly):
+def get_name(path):
+    last = path.rfind("\\")
+    # 0 & last are the starting and ending index 
+    index = path.rfind("\\", 0, last)
+
+    # adjusting the name of the paths by taking the last 2 words
+    name = path[index+1:]
+    name = name.replace("\\", " ")
+
+    return name
+
+
+def log_event(isWeekly):
     global counter
     global total_space
+    global path_name
+    log_file = "log.txt"
 
     now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
@@ -196,25 +225,45 @@ def LogEvent(isWeekly):
 
         # checking if the logging is for weekly or daily deletion
         if isWeekly:
-            # making the necessary changes foreach line of the log file
+            # making the changes on the initial lines
             lines[0] = lines[0].replace(lines[0], f"Lifetime Run Counter: {counter}\n")
             lines[2] = lines[2].replace(lines[2], f"Last Weekly Deletion: {today}\n")
             lines[3] = lines[3].replace(lines[3], f"Last Try: {now}\n")
             lines[4] = lines[4].replace(lines[4], f"Total: {total_space} mB\n")
-            lines[7] = lines[7].replace(lines[7], f"Last prefetch space Freed: {storage_everyweek[paths[2]]} mB\n")
-            lines[8] = lines[8].replace(lines[8], f"Last Software Distribution space Freed: {storage_everyweek[paths[3]]} mB\n")
-            lines[9] = lines[9].replace(lines[9], f"Last AMD space Freed: {storage_everyweek[paths[4]]} mB")
+            
+            n = 0
+            # getting the weekly data index
+            for i in range(len(lines)):
+                if lines[i] == "Weekly Deletion:\n":
+                    n = i + 1
+                    break
 
-            file.writelines(lines)
+            # updating the weekly data
+            for key in storage_everyweek:
+                path_name = get_name(key)
+                lines[n] = lines[n].replace(lines[n], f"Last {path_name} space Freed: {storage_everyweek[key]} mB\n")
+                n += 1
         else:
-            # making the necessary changes foreach line of the log file
+            # making the changes on the initial lines
             lines[0] = lines[0].replace(lines[0], f"Lifetime Run Counter: {counter}\n")
             lines[1] = lines[1].replace(lines[1], f"Last Everyday Deletion: {today}\n")
             lines[3] = lines[3].replace(lines[3], f"Last Try: {now}\n")
             lines[4] = lines[4].replace(lines[4], f"Total: {total_space} mB\n")
-            lines[5] = lines[5].replace(lines[5], f"Last temp space Freed: {storage_everyday[paths[0]]} mB\n")
-            lines[6] = lines[6].replace(lines[6], f"Last %temp% space Freed: {storage_everyday[paths[1]]} mB\n")
+            
+            n = 0
+            # getting the daily data index
+            for i in range(len(lines)):
+                if lines[i] == "Daily Deletion:\n":
+                    n = i + 1
+                    break
 
-            file.writelines(lines)
+            # updating the daily data
+            for key in storage_everyday:
+                path_name = get_name(key)
+                lines[n] = lines[n].replace(lines[n], f"Last {path_name} space Freed: {storage_everyday[key]} mB\n")
+                n += 1
+        
+        file.writelines(lines)
 
-Main()
+
+main()
