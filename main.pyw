@@ -129,14 +129,8 @@ def DeleteContents(path, storage_counter, isWeekly):
 
                     os.remove(file_path)
                 elif os.path.isdir(file_path):
-                    # os.walk() allways returns a three value tuple. 
-                    # that's why even when not using, I need to declare 3 variables in for loop
-                    for dirpath, dirnames, filenames in os.walk(path):
-                        for filename in filenames:
-                            # creating a new file path for every file in the folder
-                            fp = os.path.join(dirpath, filename)
-                            # getting the total filesize of that dir
-                            total_size += os.path.getsize(fp)
+                    # adding the total size for each subfolder
+                    total_size += get_dir_size(file_path)
 
                     # converting to mB
                     total_size /= math.pow(1024, 2)
@@ -160,6 +154,27 @@ def DeleteContents(path, storage_counter, isWeekly):
                     storage_everyday[path] = total_size
                 case 1:
                     storage_everyday[path] = total_size
+
+
+# calls for the function recursively until every file size is counted
+def get_dir_size(path):
+    dir_size = 0.0
+
+    # os.walk() allways returns a three value tuple. 
+    # that's why even when not using, I need to declare 3 variables in for loop
+    for dirpath, dirnames, filenames in os.walk(path):
+        for filename in filenames:
+            # creating a new file path for every file in the folder
+            fp = os.path.join(dirpath, filename)
+
+            # if the current file is a file, add it to the total size
+            if os.path.isfile(fp):
+                dir_size += os.path.getsize(fp)
+            # recursively calling the function to get the size of the dir
+            else:
+                get_dir_size(fp)
+
+    return dir_size
 
 
 def LogEvent(isWeekly):
